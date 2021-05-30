@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 typedef struct regveiculocab{
     char status;
@@ -53,6 +54,88 @@ typedef struct reglinhadados{
 
 //////////////////////////////////////////////////////////
 
+void binarioNaTela(char *nomeArquivoBinario) { /* Você não precisa entender o código dessa função. */
+
+	/* Use essa função para comparação no run.codes. Lembre-se de ter fechado (fclose) o arquivo anteriormente.
+	*  Ela vai abrir de novo para leitura e depois fechar (você não vai perder pontos por isso se usar ela). */
+
+	unsigned long i, cs;
+	unsigned char *mb;
+	size_t fl;
+	FILE *fs;
+	if(nomeArquivoBinario == NULL || !(fs = fopen(nomeArquivoBinario, "rb"))) {
+		fprintf(stderr, "ERRO AO ESCREVER O BINARIO NA TELA (função binarioNaTela): não foi possível abrir o arquivo que me passou para leitura. Ele existe e você tá passando o nome certo? Você lembrou de fechar ele com fclose depois de usar?\n");
+		return;
+	}
+	fseek(fs, 0, SEEK_END);
+	fl = ftell(fs);
+	fseek(fs, 0, SEEK_SET);
+	mb = (unsigned char *) malloc(fl);
+	fread(mb, 1, fl, fs);
+
+	cs = 0;
+	for(i = 0; i < fl; i++) {
+		cs += (unsigned long) mb[i];
+	}
+	printf("%lf\n", (cs / (double) 100));
+	free(mb);
+	fclose(fs);
+}
+
+void scan_quote_string(char *str) {
+
+	/*
+	*	Use essa função para ler um campo string delimitado entre aspas (").
+	*	Chame ela na hora que for ler tal campo. Por exemplo:
+	*
+	*	A entrada está da seguinte forma:
+	*		nomeDoCampo "MARIA DA SILVA"
+	*
+	*	Para ler isso para as strings já alocadas str1 e str2 do seu programa, você faz:
+	*		scanf("%s", str1); // Vai salvar nomeDoCampo em str1
+	*		scan_quote_string(str2); // Vai salvar MARIA DA SILVA em str2 (sem as aspas)
+	*
+	*/
+
+	char R;
+
+	while((R = getchar()) != EOF && isspace(R)); // ignorar espaços, \r, \n...
+
+	if(R == 'N' || R == 'n') { // campo NULO
+		getchar(); getchar(); getchar(); // ignorar o "ULO" de NULO.
+		strcpy(str, ""); // copia string vazia
+	} else if(R == '\"') {
+		if(scanf("%[^\"]", str) != 1) { // ler até o fechamento das aspas
+			strcpy(str, "");
+		}
+		getchar(); // ignorar aspas fechando
+	} else if(R != EOF){ // vc tá tentando ler uma string que não tá entre aspas! Fazer leitura normal %s então, pois deve ser algum inteiro ou algo assim...
+		str[0] = R;
+		scanf("%s", &str[1]);
+	} else { // EOF
+		strcpy(str, "");
+	}
+}
+
+
+/* ---------------- EXTRA ----------------
+
+OPCIONAL: dicas sobre scanf() e fscanf():
+
+scanf("%[^,]", string) -> lê até encontrar o caractere ',', não incluindo o mesmo na leitura.
+
+Exemplo de entrada: "Oi, esse é um exemplo."
+Nesse caso, o scanf("%[^,]") tem como resultado a string "Oi";
+
+scanf("%[^\"]", string) -> lê até encontrar o caractere '"', não incluindo o mesmo na leitura.
+scanf("%[^\n]", string) -> lê até encontrar o fim da linha, não incluindo o '\n' na leitura.
+
+scanf("%*c") --> lê um char e não guarda em nenhuma variável, como se tivesse ignorado ele
+
+*/
+
+//////////////////////////////////////////////////////////
+
 void ler_linha(FILE* arquivo, char* linha){
     fgets(linha, 1000, arquivo);
     return;
@@ -62,39 +145,21 @@ void ler_linha(FILE* arquivo, char* linha){
 
 void escrever_dados_veiculo(FILE* binario, char* linha, RegVeiculoDados* dados){
 
-    //removido
-    printf("%d ", fwrite(&dados->removido, sizeof(char), 1, binario));
-    //tamanhoRegistro
-    printf("%d ", fwrite(&dados->tamanhoRegistro, sizeof(int), 1, binario));
-    //prefixo
-    printf("%d ", fwrite(dados->prefixo, sizeof(char), 5, binario));
-    //data
-    printf("%d ", fwrite(dados->data, sizeof(char), 10, binario));
-    //quantidadeLugares
-    printf("%d ", fwrite(&dados->quantidadeLugares, sizeof(int), 1, binario));
-    //codLinha
-    printf("%d ", fwrite(&dados->codLinha, sizeof(int), 1, binario));
-    //tamanhoModelo
-    printf("%d ", fwrite(&dados->tamanhoModelo, sizeof(int), 1, binario));
-    //modelo
-    printf("%d ", fwrite(dados->modelo, sizeof(char), dados->tamanhoModelo, binario));
-    //tamanhoCategoria
-    printf("%d ", fwrite(&dados->tamanhoCategoria, sizeof(int), 1, binario));
-    //categoria
-    printf("%d\n", fwrite(dados->categoria, sizeof(char), dados->tamanhoCategoria, binario));
-
-
-    printf("Prefixo do veiculo: %s\n", dados->prefixo);
-    printf("Modelo do veiculo: %s\n", dados->modelo);
-    printf("Categoria do veiculo: %s\n", dados->categoria);
-    printf("Data de entrada do veiculo na frota: %s\n", dados->data);
-    printf("Quantidade de lugares sentados disponiveis: %d\n", dados->quantidadeLugares);
-    printf("\n");
+    fwrite(&dados->removido, sizeof(char), 1, binario);
+    fwrite(&dados->tamanhoRegistro, sizeof(int), 1, binario);
+    fwrite(dados->prefixo, sizeof(char), 5, binario);
+    fwrite(dados->data, sizeof(char), 10, binario);
+    fwrite(&dados->quantidadeLugares, sizeof(int), 1, binario);
+    fwrite(&dados->codLinha, sizeof(int), 1, binario);
+    fwrite(&dados->tamanhoModelo, sizeof(int), 1, binario);
+    fwrite(dados->modelo, sizeof(char), dados->tamanhoModelo, binario);
+    fwrite(&dados->tamanhoCategoria, sizeof(int), 1, binario);
+    fwrite(dados->categoria, sizeof(char), dados->tamanhoCategoria, binario);
 
     return;
 }
 
-void atribuir_dados_veiculo(RegVeiculoDados* dados, char* linha){
+void atribuir_dados_veiculo(RegVeiculoDados* dados, RegVeiculoCab* cabecalho, char* linha){
 
     char *tok;
 
@@ -102,8 +167,11 @@ void atribuir_dados_veiculo(RegVeiculoDados* dados, char* linha){
     tok = strtok(linha, ",");
     strcpy(dados->prefixo, tok);
 
+    cabecalho->nroRegistros++;
+
     //Confiro se o registro esta logicamente removido
     if(dados->prefixo[0] == '*'){
+        cabecalho->nroRegRemovidos++;
         dados->removido = '0';
     } else{
         dados->removido = '1';
@@ -196,13 +264,15 @@ void primeiro_caso(){
     RegVeiculoCab* cabecalho = (RegVeiculoCab*) malloc(sizeof(RegVeiculoCab));
     RegVeiculoDados* dados = (RegVeiculoDados*) malloc(sizeof(RegVeiculoDados));
 
-    char nome_arquivo[20];
+    char nome_csv[20];
+    char nome_bin[20];
     char linha[1000];
 
-    scanf("%[^\n]s", nome_arquivo);
+    scanf("%s ", nome_csv);
+    scanf("%[^\n]s", nome_bin);
 
-    FILE* csv = fopen(nome_arquivo, "r");
-    FILE* binario = fopen("veiculo.bin", "wb");
+    FILE* csv = fopen(nome_csv, "r");
+    FILE* binario = fopen(nome_bin, "wb");
 
     ler_linha(csv, linha);
 
@@ -211,13 +281,26 @@ void primeiro_caso(){
     escrever_cabecalho_veiculo(binario, linha, cabecalho);
 
     while(1){
+        linha[0] = '\0';
         ler_linha(csv, linha);
-        if(linha == NULL){
+
+        if(strcmp(linha, "\0") == 0){
             break;
         }
-        atribuir_dados_veiculo(dados, linha);
+        atribuir_dados_veiculo(dados, cabecalho, linha);
         escrever_dados_veiculo(binario, linha, dados);
     }
+
+    cabecalho->status = '1';
+    cabecalho->byteProxReg = ftell(binario);
+
+    fseek(binario, 0, SEEK_SET);
+    fwrite(&cabecalho->status, sizeof(char), 1, binario);
+    fwrite(&cabecalho->byteProxReg, sizeof(long long), 1, binario);
+    fwrite(&cabecalho->nroRegistros, sizeof(int), 1, binario);
+    fwrite(&cabecalho->nroRegRemovidos, sizeof(int), 1, binario);
+
+    binarioNaTela(nome_bin);
 
     fclose(csv);
     fclose(binario);
@@ -232,7 +315,7 @@ void escrever_dados_linha(FILE* binario, char* linha, RegLinhaDados* dados){
     fwrite(&dados->removido, sizeof(char), 1, binario);
     fwrite(&dados->tamanhoRegistro, sizeof(int), 1, binario);
     fwrite(&dados->codLinha, sizeof(int), 1, binario);
-    fwrite(&dados->aceitaCartao, sizeof(char), 1, binario);
+    fwrite(dados->aceitaCartao, sizeof(char), 1, binario);
     fwrite(&dados->tamanhoNome, sizeof(int), 1, binario);
     fwrite(dados->nomeLinha, sizeof(char), dados->tamanhoNome, binario);
     fwrite(&dados->tamanhoCor, sizeof(int), 1, binario);
@@ -241,22 +324,24 @@ void escrever_dados_linha(FILE* binario, char* linha, RegLinhaDados* dados){
     return;
 }
 
-void atribuir_dados_linha(RegLinhaDados* dados, char* linha){
+void atribuir_dados_linha(RegLinhaDados* dados, RegLinhaCab* cabecalho,char* linha){
 
     char *tok;
 
-    dados->removido = '1';
     dados->tamanhoRegistro = 0;
 
     //Lendo os campos
     tok = strtok(linha, ",");
     strcpy(dados->codLinha, tok);
 
+    cabecalho->nroRegistros++;
+
     //Confiro se o registro esta logicamente removido
     if(dados->codLinha[0] == '*'){
-        dados->removido = 0;
+        cabecalho->nroRegRemovidos++;
+        dados->removido = '0';
     } else{
-        dados->removido = 1;
+        dados->removido = '1';
     }
 
 
@@ -323,13 +408,15 @@ void segundo_caso(){
     RegLinhaCab* cabecalho = (RegLinhaCab*) malloc(sizeof(RegLinhaCab));
     RegLinhaDados* dados = (RegLinhaDados*) malloc(sizeof(RegLinhaDados));
 
-    char nome_arquivo[20];
+    char nome_csv[20];
+    char nome_bin[20];
     char linha[1000];
 
-    scanf("%[^\n]s", nome_arquivo);
+    scanf("%s ", nome_csv);
+    scanf("%[^\n]s", nome_bin);
 
-    FILE* csv = fopen(nome_arquivo, "r");
-    FILE* binario = fopen("linha.bin", "wb");
+    FILE* csv = fopen(nome_csv, "r");
+    FILE* binario = fopen(nome_bin, "wb");
 
     ler_linha(csv, linha);
 
@@ -338,13 +425,26 @@ void segundo_caso(){
     escrever_cabecalho_linha(binario, linha, cabecalho);
 
     while(1){
+        linha[0] = '\0';
         ler_linha(csv, linha);
-        if(linha == NULL){
+
+        if(strcmp(linha, "\0") == 0){
             break;
         }
-        atribuir_dados_linha(dados, linha);
+        atribuir_dados_linha(dados, cabecalho,linha);
         escrever_dados_linha(binario, linha, dados);
     }
+
+    cabecalho->status = '1';
+    cabecalho->byteProxReg = ftell(binario);
+
+    fseek(binario, 0, SEEK_SET);
+    fwrite(&cabecalho->status, sizeof(char), 1, binario);
+    fwrite(&cabecalho->byteProxReg, sizeof(long long), 1, binario);
+    fwrite(&cabecalho->nroRegistros, sizeof(int), 1, binario);
+    fwrite(&cabecalho->nroRegRemovidos, sizeof(int), 1, binario);
+
+    binarioNaTela(nome_bin);
 
     fclose(csv);
     fclose(binario);
@@ -358,13 +458,20 @@ void terceiro_caso(){
 
     RegVeiculoDados* dados = (RegVeiculoDados*) malloc(sizeof(RegVeiculoDados));
 
-    char nome_arquivo[20];
+    char nome_bin[20];
 
-    dados->tamanhoRegistro = 175;
+    dados->tamanhoRegistro = 174;
 
-    scanf("%[^\n]s", nome_arquivo);
+    scanf("%[^\n]s", nome_bin);
 
-    FILE* binario = fopen(nome_arquivo, "rb");  
+    FILE* binario = fopen(nome_bin, "rb");
+
+    char status;
+    fread(&status, sizeof(char), 1, binario);
+    if(status == '0'){
+        printf("Falha no processamento do arquivo\n");
+        return;
+    }
 
     if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
         return;
@@ -372,7 +479,7 @@ void terceiro_caso(){
 
     while(fread(&dados->removido, sizeof(char), 1, binario) == 1){
         fread(&dados->tamanhoRegistro, sizeof(int), 1, binario);
-        if(dados->removido = '1'){
+        if(dados->removido == '1'){
             fread(dados->prefixo, sizeof(char), 5, binario);
             fread(dados->data, sizeof(char), 10, binario);
             fread(&dados->quantidadeLugares, sizeof(int), 1, binario);
@@ -401,6 +508,480 @@ void terceiro_caso(){
     return;
 }
 
+void quarto_caso(){
+
+    RegLinhaDados* dados = (RegLinhaDados*) malloc(sizeof(RegLinhaDados));
+
+    char nome_bin[20];
+
+    dados->tamanhoRegistro = 81;
+
+    scanf("%[^\n]s", nome_bin);
+
+    FILE* binario = fopen(nome_bin, "rb");
+
+    char status;
+    fread(&status, sizeof(char), 1, binario);
+    if(status == '0'){
+        printf("Falha no processamento do arquivo\n");
+        return;
+    }
+
+    if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+        return;
+    }  
+
+    while(fread(&dados->removido, sizeof(char), 1, binario) == 1){
+        fread(&dados->tamanhoRegistro, sizeof(int), 1, binario);
+        if(dados->removido == '1'){
+            fread(&dados->codLinha, sizeof(int), 1, binario);
+
+            fread(dados->aceitaCartao, sizeof(char), 1, binario);
+            fread(&dados->tamanhoNome, sizeof(int), 1, binario);
+            fread(dados->nomeLinha, sizeof(char), dados->tamanhoNome, binario);
+            dados->nomeLinha[dados->tamanhoNome] = '\0';
+            fread(&dados->tamanhoCor, sizeof(int), 1, binario);
+            fread(dados->corLinha, sizeof(char), dados->tamanhoCor, binario);
+            dados->corLinha[dados->tamanhoCor] = '\0';
+            printf("Codigo da linha: %s\n", dados->codLinha);
+            printf("Nome da linha: %s\n", dados->nomeLinha);
+            printf("Cor que descreve a linha: %s\n", dados->corLinha);
+            printf("Aceita cartao: ");
+            if(strcmp(dados->aceitaCartao, "S") == 0){
+                printf("PAGAMENTO SOMENTE COM CARTAO SEM PRESENCA DE COBRADOR\n");
+            }
+            if(strcmp(dados->aceitaCartao, "N") == 0){
+                printf("PAGAMENTO EM CARTAO E DINHEIRO\n");
+            }
+            if(strcmp(dados->aceitaCartao, "F") == 0){
+                printf("PAGAMENTO EM CARTAO SOMENTE NO FINAL DE SEMANA\n");
+            }
+            printf("\n");
+        } else{
+            if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+                return;
+            }
+        }
+    }
+
+    fclose(binario);
+
+    return;
+}
+
+int quinto_caso(){
+
+    RegVeiculoDados* dados = (RegVeiculoDados*) malloc(sizeof(RegVeiculoDados));
+
+    dados->tamanhoRegistro = 175;
+
+    char nome_bin[20];
+    char nomeDoCampo[20];
+    char chave[100];
+
+    int contagem = 0;
+
+    scanf("%s ", nome_bin);
+    scanf("%s ", nomeDoCampo);
+    scanf("%[^\n]s", chave);
+
+    FILE* binario = fopen(nome_bin, "rb");
+
+    char status;
+    fread(&status, sizeof(char), 1, binario);
+    if(status == '0'){
+        printf("Falha no processamento do arquivo\n");
+        return 1;
+    }
+
+    if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+        return contagem;
+    } 
+
+    if(strcmp(nomeDoCampo, "prefixo") == 0){
+
+        while(fread(&dados->removido, sizeof(char), 1, binario) == 1){
+            fread(&dados->tamanhoRegistro, sizeof(int), 1, binario);
+            if(dados->removido == '1'){
+                fread(dados->prefixo, sizeof(char), 5, binario);
+                if(strcmp(dados->prefixo, chave) == 0){
+                    contagem = 1;
+                    fread(dados->data, sizeof(char), 10, binario);
+                    fread(&dados->quantidadeLugares, sizeof(int), 1, binario);
+                    fseek(binario, sizeof(int), SEEK_CUR);
+                    fread(&dados->tamanhoModelo, sizeof(int), 1, binario);
+                    fread(dados->modelo, sizeof(char), dados->tamanhoModelo, binario);
+                    dados->modelo[dados->tamanhoModelo] = '\0';
+                    fread(&dados->tamanhoCategoria, sizeof(int), 1, binario);
+                    fread(dados->categoria, sizeof(char), dados->tamanhoCategoria, binario);
+                    dados->categoria[dados->tamanhoCategoria] = '\0';
+                    printf("Prefixo do veiculo: %s\n", dados->prefixo);
+                    printf("Modelo do veiculo: %s\n", dados->modelo);
+                    printf("Categoria do veiculo: %s\n", dados->categoria);
+                    printf("Data de entrada do veiculo na frota: %s\n", dados->data);
+                    printf("Quantidade de lugares sentados disponiveis: %d\n", dados->quantidadeLugares);
+                    printf("\n");
+                } else{
+                    if(fseek(binario, dados->tamanhoRegistro - 5, SEEK_CUR) != 0){
+                        return contagem;
+                    }
+                }            
+            } else{
+                if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+                    return contagem;
+                }
+            } 
+        }
+    }
+
+    if(strcmp(nomeDoCampo, "data") == 0){
+
+        while(fread(&dados->removido, sizeof(char), 1, binario) == 1){
+            fread(&dados->tamanhoRegistro, sizeof(int), 1, binario);
+            if(dados->removido == '1'){
+                fread(dados->prefixo, sizeof(char), 5, binario);
+                fread(dados->data, sizeof(char), 10, binario);
+                if(strcmp(dados->data, chave) == 0){
+                    contagem = 1;
+                    fread(&dados->quantidadeLugares, sizeof(int), 1, binario);
+                    fseek(binario, sizeof(int), SEEK_CUR);
+                    fread(&dados->tamanhoModelo, sizeof(int), 1, binario);
+                    fread(dados->modelo, sizeof(char), dados->tamanhoModelo, binario);
+                    dados->modelo[dados->tamanhoModelo] = '\0';
+                    fread(&dados->tamanhoCategoria, sizeof(int), 1, binario);
+                    fread(dados->categoria, sizeof(char), dados->tamanhoCategoria, binario);
+                    dados->categoria[dados->tamanhoCategoria] = '\0';
+                    printf("Prefixo do veiculo: %s\n", dados->prefixo);
+                    printf("Modelo do veiculo: %s\n", dados->modelo);
+                    printf("Categoria do veiculo: %s\n", dados->categoria);
+                    printf("Data de entrada do veiculo na frota: %s\n", dados->data);
+                    printf("Quantidade de lugares sentados disponiveis: %d\n", dados->quantidadeLugares);
+                    printf("\n");
+                } else{
+                    if(fseek(binario, dados->tamanhoRegistro - 5 - 10, SEEK_CUR) != 0){
+                        return contagem;
+                    }
+                }            
+            } else{
+                if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+                    return contagem;
+                }
+            } 
+        }
+    }
+
+    if(strcmp(nomeDoCampo, "quantidadeLugares") == 0){
+
+        while(fread(&dados->removido, sizeof(char), 1, binario) == 1){
+            fread(&dados->tamanhoRegistro, sizeof(int), 1, binario);
+            if(dados->removido == '1'){
+                fread(dados->prefixo, sizeof(char), 5, binario);
+                fread(dados->data, sizeof(char), 10, binario);
+                fread(&dados->quantidadeLugares, sizeof(int), 1, binario);
+                if(dados->quantidadeLugares == atoi(chave)){
+                    contagem = 1;
+                    fseek(binario, sizeof(int), SEEK_CUR);
+                    fread(&dados->tamanhoModelo, sizeof(int), 1, binario);
+                    fread(dados->modelo, sizeof(char), dados->tamanhoModelo, binario);
+                    dados->modelo[dados->tamanhoModelo] = '\0';
+                    fread(&dados->tamanhoCategoria, sizeof(int), 1, binario);
+                    fread(dados->categoria, sizeof(char), dados->tamanhoCategoria, binario);
+                    dados->categoria[dados->tamanhoCategoria] = '\0';
+                    printf("Prefixo do veiculo: %s\n", dados->prefixo);
+                    printf("Modelo do veiculo: %s\n", dados->modelo);
+                    printf("Categoria do veiculo: %s\n", dados->categoria);
+                    printf("Data de entrada do veiculo na frota: %s\n", dados->data);
+                    printf("Quantidade de lugares sentados disponiveis: %d\n", dados->quantidadeLugares);
+                    printf("\n");
+                } else{
+                    if(fseek(binario, dados->tamanhoRegistro - 5 - 10 - 4, SEEK_CUR) != 0){
+                        return contagem;
+                    }
+                }            
+            } else{
+                if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+                    return contagem;
+                }
+            } 
+        }
+    }
+
+    if(strcmp(nomeDoCampo, "modelo") == 0){
+
+        while(fread(&dados->removido, sizeof(char), 1, binario) == 1){
+            fread(&dados->tamanhoRegistro, sizeof(int), 1, binario);
+            if(dados->removido == '1'){
+                fread(dados->prefixo, sizeof(char), 5, binario);
+                fread(dados->data, sizeof(char), 10, binario);
+                fread(&dados->quantidadeLugares, sizeof(int), 1, binario);
+                fseek(binario, sizeof(int), SEEK_CUR);
+                fread(&dados->tamanhoModelo, sizeof(int), 1, binario);
+                fread(dados->modelo, sizeof(char), dados->tamanhoModelo, binario);
+                dados->modelo[dados->tamanhoModelo] = '\0';
+                if(strcmp(dados->modelo, chave) == 0){
+                    contagem = 1;
+                    fread(&dados->tamanhoCategoria, sizeof(int), 1, binario);
+                    fread(dados->categoria, sizeof(char), dados->tamanhoCategoria, binario);
+                    dados->categoria[dados->tamanhoCategoria] = '\0';
+                    printf("Prefixo do veiculo: %s\n", dados->prefixo);
+                    printf("Modelo do veiculo: %s\n", dados->modelo);
+                    printf("Categoria do veiculo: %s\n", dados->categoria);
+                    printf("Data de entrada do veiculo na frota: %s\n", dados->data);
+                    printf("Quantidade de lugares sentados disponiveis: %d\n", dados->quantidadeLugares);
+                    printf("\n");
+                } else{
+                    if(fseek(binario, dados->tamanhoRegistro - 5 - 10 - 4 - 4 - 4 - dados->tamanhoModelo, SEEK_CUR) != 0){
+                        return contagem;
+                    }
+                }            
+            } else{
+                if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+                    return contagem;
+                }
+            } 
+        }
+    }
+    
+    if(strcmp(nomeDoCampo, "categoria") == 0){
+
+        while(fread(&dados->removido, sizeof(char), 1, binario) == 1){
+            fread(&dados->tamanhoRegistro, sizeof(int), 1, binario);
+            if(dados->removido == '1'){
+                fread(dados->prefixo, sizeof(char), 5, binario);
+                fread(dados->data, sizeof(char), 10, binario);
+                fread(&dados->quantidadeLugares, sizeof(int), 1, binario);
+                fseek(binario, sizeof(int), SEEK_CUR);
+                fread(&dados->tamanhoModelo, sizeof(int), 1, binario);
+                fread(dados->modelo, sizeof(char), dados->tamanhoModelo, binario);
+                dados->modelo[dados->tamanhoModelo] = '\0';
+                fread(&dados->tamanhoCategoria, sizeof(int), 1, binario);
+                fread(dados->categoria, sizeof(char), dados->tamanhoCategoria, binario);
+                dados->categoria[dados->tamanhoCategoria] = '\0';
+                if(strcmp(dados->categoria, chave) == 0){
+                    contagem = 1;
+                    printf("Prefixo do veiculo: %s\n", dados->prefixo);
+                    printf("Modelo do veiculo: %s\n", dados->modelo);
+                    printf("Categoria do veiculo: %s\n", dados->categoria);
+                    printf("Data de entrada do veiculo na frota: %s\n", dados->data);
+                    printf("Quantidade de lugares sentados disponiveis: %d\n", dados->quantidadeLugares);
+                    printf("\n");
+                } else{
+                    if(fseek(binario, dados->tamanhoRegistro - 5 - 10 - 4 - 4 - 4 - dados->tamanhoModelo - 4 - dados->tamanhoCategoria, SEEK_CUR) != 0){
+                        return contagem;
+                    }
+                }            
+            } else{
+                if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+                    return contagem;
+                }
+            } 
+        }
+    }
+
+    fclose(binario);
+
+    return contagem;
+}
+
+int sexto_caso(){
+
+    RegLinhaDados* dados = (RegLinhaDados*) malloc(sizeof(RegLinhaDados));
+
+    dados->tamanhoRegistro = 82;
+
+    char nome_bin[20];
+    char nomeDoCampo[20];
+    char chave[100];
+    
+    int contagem = 0;
+
+    scanf("%s ", nome_bin);
+    scanf("%s ", nomeDoCampo);
+    scanf("%[^\n]s", chave);
+
+    FILE* binario = fopen(nome_bin, "rb");
+
+    char status;
+    fread(&status, sizeof(char), 1, binario);
+    if(status == '0'){
+        printf("Falha no processamento do arquivo\n");
+        return 1;
+    }
+
+    if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+        return contagem;
+    }
+
+    if(strcmp(nomeDoCampo, "codLinha") == 0){
+        while(fread(&dados->removido, sizeof(char), 1, binario) == 1){
+            fread(&dados->tamanhoRegistro, sizeof(int), 1, binario);
+            if(dados->removido == '1'){
+                fread(&dados->codLinha, sizeof(int), 1, binario);
+                if(strcmp(dados->codLinha, chave) == 0){
+                    contagem = 1;
+                    fread(dados->aceitaCartao, sizeof(char), 1, binario);
+                    fread(&dados->tamanhoNome, sizeof(int), 1, binario);
+                    fread(dados->nomeLinha, sizeof(char), dados->tamanhoNome, binario);
+                    dados->nomeLinha[dados->tamanhoNome] = '\0';
+                    fread(&dados->tamanhoCor, sizeof(int), 1, binario);
+                    fread(dados->corLinha, sizeof(char), dados->tamanhoCor, binario);
+                    dados->corLinha[dados->tamanhoCor] = '\0';
+                    printf("Codigo da linha: %s\n", dados->codLinha);
+                    printf("Nome da linha: %s\n", dados->nomeLinha);
+                    printf("Cor que descreve a linha: %s\n", dados->corLinha);
+                    printf("Aceita cartao: ");
+                    if(strcmp(dados->aceitaCartao, "S") == 0){
+                        printf("PAGAMENTO SOMENTE COM CARTAO SEM PRESENCA DE COBRADOR\n");
+                    }
+                    if(strcmp(dados->aceitaCartao, "N") == 0){
+                        printf("PAGAMENTO EM CARTAO E DINHEIRO\n");
+                    }
+                    if(strcmp(dados->aceitaCartao, "F") == 0){
+                        printf("PAGAMENTO EM CARTAO SOMENTE NO FINAL DE SEMANA\n");
+                    }
+                    printf("\n");
+                } else{
+                    if(fseek(binario, dados->tamanhoRegistro - 4, SEEK_CUR) != 0){
+                        return contagem;
+                    }
+                }
+            } else{
+                if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+                    return contagem;
+                }
+            }
+        }
+    }
+
+    if(strcmp(nomeDoCampo, "aceitaCartao") == 0){
+        while(fread(&dados->removido, sizeof(char), 1, binario) == 1){
+            fread(&dados->tamanhoRegistro, sizeof(int), 1, binario);
+            if(dados->removido == '1'){
+                fread(&dados->codLinha, sizeof(int), 1, binario);
+                fread(dados->aceitaCartao, sizeof(char), 1, binario);
+                if(strcmp(dados->aceitaCartao, chave) == 0){
+                    contagem = 1;
+                    fread(&dados->tamanhoNome, sizeof(int), 1, binario);
+                    fread(dados->nomeLinha, sizeof(char), dados->tamanhoNome, binario);
+                    dados->nomeLinha[dados->tamanhoNome] = '\0';
+                    fread(&dados->tamanhoCor, sizeof(int), 1, binario);
+                    fread(dados->corLinha, sizeof(char), dados->tamanhoCor, binario);
+                    dados->corLinha[dados->tamanhoCor] = '\0';
+                    printf("Codigo da linha: %s\n", dados->codLinha);
+                    printf("Nome da linha: %s\n", dados->nomeLinha);
+                    printf("Cor que descreve a linha: %s\n", dados->corLinha);
+                    printf("Aceita cartao: ");
+                    if(strcmp(dados->aceitaCartao, "S") == 0){
+                        printf("PAGAMENTO SOMENTE COM CARTAO SEM PRESENCA DE COBRADOR\n");
+                    }
+                    if(strcmp(dados->aceitaCartao, "N") == 0){
+                        printf("PAGAMENTO EM CARTAO E DINHEIRO\n");
+                    }
+                    if(strcmp(dados->aceitaCartao, "F") == 0){
+                        printf("PAGAMENTO EM CARTAO SOMENTE NO FINAL DE SEMANA\n");
+                    }
+                    printf("\n");
+                } else{
+                    if(fseek(binario, dados->tamanhoRegistro - 4 - 1, SEEK_CUR) != 0){
+                        return contagem;
+                    }
+                }
+            } else{
+                if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+                    return contagem;
+                }
+            }
+        }
+    }
+    
+    if(strcmp(nomeDoCampo, "nomeLinha") == 0){
+        while(fread(&dados->removido, sizeof(char), 1, binario) == 1){
+            fread(&dados->tamanhoRegistro, sizeof(int), 1, binario);
+            if(dados->removido == '1'){
+                fread(&dados->codLinha, sizeof(int), 1, binario);
+                fread(dados->aceitaCartao, sizeof(char), 1, binario);
+                fread(&dados->tamanhoNome, sizeof(int), 1, binario);
+                fread(dados->nomeLinha, sizeof(char), dados->tamanhoNome, binario);
+                dados->nomeLinha[dados->tamanhoNome] = '\0';
+                if(strcmp(dados->nomeLinha, chave) == 0){
+                    contagem = 1;
+                    fread(&dados->tamanhoCor, sizeof(int), 1, binario);
+                    fread(dados->corLinha, sizeof(char), dados->tamanhoCor, binario);
+                    dados->corLinha[dados->tamanhoCor] = '\0';
+                    printf("Codigo da linha: %s\n", dados->codLinha);
+                    printf("Nome da linha: %s\n", dados->nomeLinha);
+                    printf("Cor que descreve a linha: %s\n", dados->corLinha);
+                    printf("Aceita cartao: ");
+                    if(strcmp(dados->aceitaCartao, "S") == 0){
+                        printf("PAGAMENTO SOMENTE COM CARTAO SEM PRESENCA DE COBRADOR\n");
+                    }
+                    if(strcmp(dados->aceitaCartao, "N") == 0){
+                        printf("PAGAMENTO EM CARTAO E DINHEIRO\n");
+                    }
+                    if(strcmp(dados->aceitaCartao, "F") == 0){
+                        printf("PAGAMENTO EM CARTAO SOMENTE NO FINAL DE SEMANA\n");
+                    }
+                    printf("\n");
+                } else{
+                    if(fseek(binario, dados->tamanhoRegistro - 4 - 1 - 4 - dados->tamanhoNome, SEEK_CUR) != 0){
+                        return contagem;
+                    }
+                }
+            } else{
+                if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+                    return contagem;
+                }
+            }
+        }
+    }
+
+    if(strcmp(nomeDoCampo, "corLinha") == 0){
+        while(fread(&dados->removido, sizeof(char), 1, binario) == 1){
+            fread(&dados->tamanhoRegistro, sizeof(int), 1, binario);
+            if(dados->removido == '1'){
+                fread(&dados->codLinha, sizeof(int), 1, binario);
+                fread(dados->aceitaCartao, sizeof(char), 1, binario);
+                fread(&dados->tamanhoNome, sizeof(int), 1, binario);
+                fread(dados->nomeLinha, sizeof(char), dados->tamanhoNome, binario);
+                dados->nomeLinha[dados->tamanhoNome] = '\0';
+                fread(&dados->tamanhoCor, sizeof(int), 1, binario);
+                fread(dados->corLinha, sizeof(char), dados->tamanhoCor, binario);
+                dados->corLinha[dados->tamanhoCor] = '\0';
+                if(strcmp(dados->corLinha, chave) == 0){
+                    contagem = 1;
+                    printf("Codigo da linha: %s\n", dados->codLinha);
+                    printf("Nome da linha: %s\n", dados->nomeLinha);
+                    printf("Cor que descreve a linha: %s\n", dados->corLinha);
+                    printf("Aceita cartao: ");
+                    if(strcmp(dados->aceitaCartao, "S") == 0){
+                        printf("PAGAMENTO SOMENTE COM CARTAO SEM PRESENCA DE COBRADOR\n");
+                    }
+                    if(strcmp(dados->aceitaCartao, "N") == 0){
+                        printf("PAGAMENTO EM CARTAO E DINHEIRO\n");
+                    }
+                    if(strcmp(dados->aceitaCartao, "F") == 0){
+                        printf("PAGAMENTO EM CARTAO SOMENTE NO FINAL DE SEMANA\n");
+                    }
+                    printf("\n");
+                } else{
+                    if(fseek(binario, dados->tamanhoRegistro - 4 - 1 - 4 - dados->tamanhoNome - 4 - dados->tamanhoCor, SEEK_CUR) != 0){
+                        return contagem;
+                    }
+                }
+            } else{
+                if(fseek(binario, dados->tamanhoRegistro, SEEK_CUR) != 0){
+                    return contagem;
+                }
+            }
+        }
+    }
+
+    fclose(binario);
+
+    return contagem;
+}
+
+
 int main(){
 
     int funcao;
@@ -417,7 +998,19 @@ int main(){
         case 3:
             terceiro_caso();
             break;
-        
+        case 4:
+            quarto_caso();
+            break;
+        case 5:
+            if(quinto_caso() == 0){
+                printf("Registro inexistente\n");
+            }
+            break;
+        case 6:
+            if(sexto_caso() == 0){
+                printf("Registro Inexistente\n");
+            }
+            break;
     }
 
     return 0;
